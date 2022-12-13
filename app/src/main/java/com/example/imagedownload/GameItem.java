@@ -11,11 +11,11 @@ public class GameItem {
         this.tag = tag;
     }
 
-    public String getTag() {
-        return tag;
-    }
-
     public ImageView getImageView() {
         return imageView;
+    }
+
+    public String getTag() {
+        return tag;
     }
 }

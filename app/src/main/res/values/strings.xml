@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">ImageGame</string>
+    <string name="app_name">Image Game</string>
+    <string name="urunishlar_soni_0">Urunishlar soni: 0</string>
 </resources>
