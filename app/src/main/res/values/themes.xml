@@ -19,6 +19,7 @@
     </style>
 
     <style name="imageViewStyle">
+        <item name="android:layout_margin">3dp</item>
         <item name="android:scaleType">fitCenter</item>
         <item name="android:src">@drawable/photoplaceholder</item>
         <item name="android:layout_width">100dp</item>

@@ -1,6 +1,7 @@
 package com.example.imagedownload;
 
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.view.animation.Animation;
@@ -12,8 +13,12 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
@@ -23,6 +28,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     TextView selectCountTextView;
     ImageView restart;
     Animation animation1, animation2, animation3;
+    SharedPreferences sharedPreferences;
+    SharedPreferences.Editor editor;
     boolean isOneSelect = false, run = true;
     boolean key1 = false, key2 = false, key3 = false, key4 = false;
     int winner = 0;
@@ -43,9 +50,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        imgPlace = new String[imgPlaceItems.length];
-        random = new Random();
-        randomInt = randomIntRestart();
+        loadOne();
 
         generateMain();
 
@@ -73,16 +78,17 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View view) {
         if (run) {
+            run = false;
+
             selectCount++;
             showSelectCount();
 
             endId = view.getId();
 
-            if (!isOneSelect) {
+            if (!isOneSelect)
                 startId = endId;
-            } else if (startId == endId) {
+            else if (startId == endId)
                 key4 = true;
-            }
 
             ImageView imageView = findViewById(endId);
             imageView.startAnimation(animation1);
@@ -90,7 +96,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             animation1.setAnimationListener(new Animation.AnimationListener() {
                 @Override
                 public void onAnimationStart(Animation animation) {
-                    run = false;
+
                 }
 
                 @Override
@@ -175,10 +181,10 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     imageViews.get(getIndex(startId)).getImageView().setVisibility(View.INVISIBLE);
                     imageView.setVisibility(View.INVISIBLE);
                     winner++;
-                    if (winner == imgPlace.length / 2)
-                        winner();
                     isOneSelect = false;
                     run = true;
+                    if (winner == imgPlace.length / 2)
+                        winner();
                 }
 
                 @Override
@@ -186,44 +192,82 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
                 }
             });
-
         }
     }
 
     private void click() {
-        restart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        restart.setOnClickListener(view -> {
+            if (run) {
                 selectCount = 0;
                 showSelectCount();
                 restart();
+                run = true;
             }
         });
     }
     // ----------------------------------------------------------
 
     // My methods
-    private void winner(){
+    private RecordUesr getRecord(){
+        String sharedPreferencesString = sharedPreferences.getString("record", "");
+        Type type = new TypeToken<List<RecordUesr>>(){}.getType();
+        List<RecordUesr> recordUesrs = MyGson.getInstance().getGson()
+                .fromJson(sharedPreferencesString, type);
+        if (recordUesrs == null)
+            return new RecordUesr("", 0, 0);
+        else {
+            RecordUesr recordUesr = recordUesrs.get(0);
+            int min = recordUesrs.get(0).getUrunishlarSoni();
+            for (int i = 1; i < recordUesrs.size(); i++) {
+                if (min > recordUesrs.get(i).getUrunishlarSoni()) {
+                    min = recordUesrs.get(i).getUrunishlarSoni();
+                    recordUesr = recordUesrs.get(i);
+                }
+            }
+            return recordUesr;
+        }
+    }
+    private void setRecord(int rec){
+        String name = "Men";
+        int urunishlarSoni = rec;
+        int orni = 1;
+        RecordUesr recordUesr = new RecordUesr(name, urunishlarSoni, orni);
+        String sharedPreferencesString = sharedPreferences.getString("record", "");
+        List<RecordUesr> recordUesrs;
+        if (sharedPreferencesString.equals("")){
+            recordUesrs = new ArrayList<>();
+        }else {
+            Type type = new TypeToken<List<RecordUesr>>(){}.getType();
+            recordUesrs = MyGson.getInstance().getGson().fromJson(sharedPreferencesString, type);
+        }
+        recordUesrs.add(recordUesr);
+        String jsonString = MyGson.getInstance().getGson().toJson(recordUesrs);
+        editor.putString("record", jsonString).commit();
+    }
+
+    private void winner() {
         new AlertDialog.Builder(this)
                 .setMessage("Tabriklaymiz siz g'olib bo'ldingiz!!!\n" +
-                        "Sizning urunishlaringiz "+selectCount+" ta")
+                        "Sizning urunishlaringiz " + selectCount + " ta")
                 .setPositiveButton("Ok", null).show();
         restart();
     }
 
     private void restart(){
+        startId = 0;
+        endId = 0;
         isOneSelect = false;
-        run = true;
         key1 = false;
         key2 = false;
         key3 = false;
         key4 = false;
         generateMain();
         load();
-        for (GameItem imageView : imageViews){
+        for (GameItem imageView : imageViews) {
             imageView.getImageView().setVisibility(View.VISIBLE);
             imageView.getImageView().setImageResource(R.drawable.photoplaceholder);
         }
+        winner = 0;
         selectCount = 0;
         showSelectCount();
     }
@@ -235,10 +279,19 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         this.selectCountTextView.setText("Urunishlar soni: " + selectCount);
     }
 
-    private void load(){
+    private void loadOne(){
         selectCountTextView = findViewById(R.id.selectCount);
         restart = findViewById(R.id.restart);
-
+        imgPlace = new String[imgPlaceItems.length];
+        random = new Random();
+        randomInt = randomIntRestart();
+        animation1 = AnimationUtils.loadAnimation(GameActivity.this, R.anim.collection1);
+        animation2 = AnimationUtils.loadAnimation(GameActivity.this, R.anim.collection2);
+        animation3 = AnimationUtils.loadAnimation(GameActivity.this, R.anim.collection3);
+        sharedPreferences = getSharedPreferences("Record", MODE_PRIVATE);
+        editor = sharedPreferences.edit();
+    }
+    private void load(){
         imageViews = new ArrayList<>();
         imageViews.add(new GameItem(findViewById(R.id.image11), imgPlace[0]));
         imageViews.add(new GameItem(findViewById(R.id.image12), imgPlace[1]));
@@ -262,10 +315,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         for (int i = 0; i < imageViews.size(); i++) {
             imageViews.get(i).getImageView().setOnClickListener(this);
         }
-
-        animation1 = AnimationUtils.loadAnimation(GameActivity.this, R.anim.collection1);
-        animation2 = AnimationUtils.loadAnimation(GameActivity.this, R.anim.collection2);
-        animation3 = AnimationUtils.loadAnimation(GameActivity.this, R.anim.collection3);
     }
 
     private void generateMain(){
